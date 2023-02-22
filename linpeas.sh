@@ -1,0 +1,1 @@
+echo "This a test file I don't think linpeas works at the moment"
