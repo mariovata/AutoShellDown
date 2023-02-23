@@ -133,7 +133,8 @@ def checks(args):
 def data_exfiltration(dport):
     p = process("/bin/bash")
     print("Starting the ftp server...")
-    p.sendline(f"sudo python -m pyftpdlib -p 21 --write".encode())
+    p.sendline("cd ./exfil".encode())
+    p.sendline(f"python -m pyftpdlib -p {dport} --write".encode())
 
 
 def main():
