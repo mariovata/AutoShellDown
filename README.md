@@ -14,12 +14,12 @@ I made this so to speed up enumeration during privilege escalation on HackTheBox
 
 ### Venv (recommended, needs python3.11-venv) 
 ```
-git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && python3 -m venv asd-env && source asd-env/bin/activate && pip3 install -r requirements.txt && chmod +x asd.py && python3 asd.py
+git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && python3 -m venv asd-env && source asd-env/bin/activate && pip3 install -r requirements.txt && chmod +x asd.py && python3 asd.py -d 1337
 ```
 
 ### Pip
 ```
-git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && pip3 install -r requirements.txt && chmod +x asd.py && python3 asd.py
+git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && pip3 install -r requirements.txt && chmod +x asd.py && python3 asd.py -d 1337
 ```
 
 ## Using venv (recommended)
@@ -30,6 +30,9 @@ git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && 
 4. `pip3 install -r requirements.txt`   - Installs the required packages (in the virtual environment)
 5. `chmod +x asd.py`                    - Makes the script executable
 6. `python3 asd.py -h`                  - Runs the script (in the virtual environment)
+
+### Deactivating venv
+`deactivate`                         - Deactivates the virtual environment
 
 ## Using pip
 
