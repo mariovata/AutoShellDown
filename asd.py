@@ -92,16 +92,16 @@ def checks(args):
     else:
         print("The file doesn't exist on the local machine")
         # Prompt the user to download the file
-        download = input("Do you want to download the file? "
-                         "/!\\ Might be outdated /!\\ (y/n): ")
-        if download == "y":
+        download = input("Do you want to download the file? /!\\ Might be outdated /!\\ (y/n):").strip()
+        if download == 'y':
             # Download the file
+            print("Downloading the file...")
             os.system("wget https://github.com/carlospolop/PEASS-ng/releases/download/20230219/linpeas.sh -O ./www/linpeas.sh")
 
         else:
             # Prompt to continue without linpeas
-            continue_without_linpeas = input("Do you want to continue without linpeas? (y/n): ")
-            if continue_without_linpeas == "y":
+            continue_without_linpeas = input("Do you want to continue without linpeas? (y/n): ").strip()
+            if continue_without_linpeas == 'y':
                 print("Continuing without linpeas")
             else:
                 return False
@@ -113,24 +113,32 @@ def checks(args):
         return True
 
     else:
-        # Check if the nc version is compatible
-        p = process("/bin/bash")
-        p.sendline("nc -e".encode())
-        needle = "invalid option"
-        # read stdout if needle appears exit
-        if p.recvuntil(needle.encode()):
-            print("The current nc version is not compatible with the script")
-            print("Are you using kali? "
-                  "nc with the -e option is not present")
-            # Kill the process
-            p.kill()
-            return False
+        print("The nc is not in the www folder copying it from /bin/nc")
+        print("Make sure the nc has the -e option! As the script uses does not check for it!")
+        os.system("cp /bin/nc ./www/nc")
+        return True
 
-        else:
-            print("The nc version is compatible")
+
+        ### OLD CODE ###
+        # This code is not used anymore as it does not work
+        # Check if the nc version is compatible
+        #p = process("/bin/bash")
+        #p.sendline("nc -e".encode())
+        #needle = "invalid option"
+        # read stdout if needle appears exit
+        #if p.recvuntil(needle.encode()):
+            #print("The current nc version is not compatible with the script")
+            #print("Are you using kali? "
+            #      "nc with the -e option is not present")
+            # Kill the process
+            #p.kill()
+            #return False
+
+        #else:
+            #print("The nc version is compatible")
             # cppy the nc to the www folder
-            os.system("cp /bin/nc ./www/nc")
-            return True
+            #os.system("cp /bin/nc ./www/nc")
+            #return True
 
 
 # Function to start the ftp server if -d is used
