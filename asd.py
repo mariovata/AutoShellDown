@@ -159,7 +159,7 @@ def main():
  /\    |_ _ (_ |_  _ |||  \ _      _
 /--\|_||_(_)__)| )(-`|||__/(_)\/\/| )
     
-    Version: 1.0.0 Experimental Build
+    Version: 1.0.0
     Listener, File Hosting, and Exfiltration
     Author: Mario Vata
     
