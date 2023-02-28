@@ -49,14 +49,16 @@ I made this so to speed up enumeration during privilege escalation on HackTheBox
 
 ### Venv (recommended, needs python3.11-venv) 
 ```
-git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && python3 -m venv asd-env && source asd-env/bin/activate && pip3 install -r requirements.txt && chmod +x asd.py
+git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && python3 -m venv asd-env && source asd-env/bin/activate && pip3 install -r requirements.txt && chmod +x asd.py && clear
 ```
 
 ### Pip
 ```
-git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && pip3 install -r requirements.txt && chmod +x asd.py
+git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && pip3 install -r requirements.txt && chmod +x asd.py && clear
 ```
 
+**Note**: the `clear` command is used to clear the terminal after the installation is complete.
+If this is not done the manual shell will not work properly or not at all!
 
 ## Using venv (recommended)
 
@@ -82,3 +84,4 @@ git clone https://github.com/mariovata/AutoShellDown.git && cd AutoShellDown && 
 * Automatically sets up a server to host files
 * Automatically uploads and runs linpeas.sh (or other scripts)
 * Automatically sets up an FTP server to exfiltrate files
+* Random tmp directory name for linpeas.sh and other scripts example: `/tmp/36AGB14TE4`
